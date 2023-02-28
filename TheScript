@@ -1,0 +1,68 @@
+#!/bin/bash
+errorYN=$?
+
+#Shows each command as they are ran in the output- useful for testing purposes, will not be included
+#in the final script, but can be commented back in if you wish.
+set -x
+
+
+#Displays the full date, including the month, day, year, and time, then places it into a variable
+#to be used later.
+timeofbackup=`date +%F`
+
+
+
+#Specifies the specific files/folders that you would like to back up, then stores it into a
+#variable to be used later. Only bin is used right now for testing purposes. (since its a very small folder.)
+thingstobackup="/bin" #/home /boot /var /usr /etc
+
+
+
+#A variable that contains the end destination for the files that have been backed up
+filedestination="/home/logan/Desktop/testbackup"
+
+
+#Name of the archive file that will contain our backup
+archivename="$timeofbackup-Backup.tgz"
+
+backupsize=`ls -sh --block-size=GB /home/logan/Desktop/testbackup/$timeofbackup-Backup.tgz`
+
+
+#print a message that confirms that the script has begun to backup the desired files.
+echo "Backing up: $thingstobackup..."
+
+
+
+#This is the command that is responsible for backing up the desired file- it uses Tar to compress and merge all of the directories under one folder. Each letter after tar corresponds to an action that will be done with
+#the file. c = create an archive folder, -v shows the progress of the archive, f is to specify a file name, and z is to archive it via gzip.
+tar -cvzf $filedestination/$archivename $thingstobackup
+          if [[ "$errorYN" == 0 ]]; then
+                  echo "Backup Successful!" || echo "Backup Failed!"
+
+
+          fi
+
+
+#Delete backups older than a specific date using the find command. It searches and finds the directory specified, and will delete any files with the extension .tgz that are older than 30 days.
+find /home/logan/Desktop/testbackup -name "*.tgz" -type f -mtime +30 -delete
+
+
+
+
+
+#This is the command used to email the specified email about the size and the location of the backups. Echo will take whatever string is specified and use it as the body of the email, and -s is where the subject is specified. in this case, it will email the recipient the size, location, and name of the file when the backup is made. 
+echo "Folders that have been backed up: $thingstobackup      |     Size and location of file: $backupsize" | mail -s "Backup $archivename is complete" example@gmail.com
+
+
+
+
+
+
+#crontab -l will list the current cron jobs so grep will know what to look through
+#grep will search for a specific string inside of our previously listed cronjob file and check to see if it exists. If it does exist, the script will finish and not add another cronjob as it's not needed.
+#If it does not exist, the next command will execute
+#If the string does not exist, it will need to be added into the cron file. We can do this through our script by opening the cron file again, then echoing/printing the desired string into the cron file.
+#The cron-job is set so the script runs every saturday at 3 AM.
+#crontab - will take the changes we make and save them permanently, opposed to temporarily / not at all.
+echo "Cron job added (if one does not already exist): "
+crontab -l | grep '/home/logan/Desktop/backupscriptNOROOT.sh' || (crontab -l; echo "0 3 * * 6 /home/logan/Desktop/backupscriptNOROOT.sh") | crontab -
